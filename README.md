@@ -1,11 +1,21 @@
-# Bravos Research Trade Signal Engine (Phase 1)
+# Bravos Research Trade Signal Bot for Interactive Brokers
 
-Monitors an inbox for Bravos Research trade-alert emails, pulls the full
-(subscriber-only) article, classifies the alert as a new position, partial
-profit booking, close, or non-trade informational update, and extracts the
-structured trade data (ticker, price, allocation weight, take-profit levels,
-stop-loss). Signals are stored in `signals.db` for Phase 2 (IBKR execution +
-Telegram approval) to consume.
+Turns Bravos Research email trade alerts into structured, machine-readable
+trade signals for Interactive Brokers automation. Monitors an inbox for
+alert emails, pulls the full subscriber-only article, classifies the alert
+(new position, partial profit booking, close, or non-trade informational
+update), and extracts the structured trade data: ticker, entry price,
+portfolio allocation weight, take-profit levels, and stop-loss.
+
+## Features
+
+- IMAP inbox polling with sender filtering — ignores non-trade info emails
+- Authenticated fetch of subscriber-gated article pages via Playwright
+- Regex-based trade classification: OPEN / PARTIAL_CLOSE / CLOSE
+- Extraction of ticker, price, allocation weight, take-profit levels, stop-loss
+- SQLite-backed signal store, ready for a downstream execution engine
+- Test suite built from real alert samples (new position, partial profit
+  booking, full close, informational update)
 
 ## Setup
 
@@ -49,15 +59,14 @@ Bravos alerts, and logs/stores each parsed signal.
 python -m pytest test_parser.py -v
 ```
 
-Covers the 5 real alert types Jon provided: new position (SOFI), partial
-profit booking (EXEL, GS), close (LSCC, ASML), and a non-trade info update.
+Covers 5 real-world alert types: new position (SOFI), partial profit
+booking (EXEL, GS), close (LSCC, ASML), and a non-trade info update.
 
-## Scope of this phase
+## Roadmap
 
-- Email monitoring + filtering (ignores non-trade info emails)
-- Trade type detection: OPEN / PARTIAL_CLOSE / CLOSE
-- Extraction: ticker, price, weight allocation, take-profit levels, stop-loss
-- Signal storage (SQLite) ready for Phase 2 to read
+This repo covers notification parsing and signal generation. Planned next:
 
-Not included yet (Phase 2/3): IBKR order placement, Telegram approval
-buttons, backup stop-loss monitoring, VPS deployment.
+- Interactive Brokers order placement via the TWS API
+- Telegram approve/reject workflow before any order is sent
+- Backup stop-loss monitoring (Bravos doesn't always publish one)
+- VPS deployment for always-on monitoring
