@@ -1,0 +1,7 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.browser_profile/
+signals.db
+.pytest_cache/
