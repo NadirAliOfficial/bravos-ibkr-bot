@@ -2,6 +2,7 @@
 
 import email
 import email.message
+import html
 import imaplib
 import re
 from dataclasses import dataclass
@@ -10,9 +11,14 @@ from email.header import decode_header
 import config
 
 SUBJECT_RE = re.compile(
-    r"the post:\s*(.+?)\s*has been published", re.I
+    r"the post:\s*(.+?)\s*has been published", re.I | re.S
 )
-URL_RE = re.compile(r"https?://bravosresearch\.com/news-feed/[^\s\)>\]]+", re.I)
+URL_RE = re.compile(r"https?://bravosresearch\.com/news-feed/[^\s\)>\]\"']+", re.I)
+
+_STYLE_SCRIPT_RE = re.compile(r"<(style|script)\b[^>]*>.*?</\1>", re.I | re.S)
+_BLOCK_TAG_RE = re.compile(r"</(p|div|tr|li|br|h[1-6])\s*>|<br\s*/?>", re.I)
+_TAG_RE = re.compile(r"<[^>]+>")
+_BLANK_LINES_RE = re.compile(r"\n{3,}")
 
 
 @dataclass
@@ -35,17 +41,41 @@ def _decode(value) -> str:
     return "".join(out)
 
 
+def _html_to_text(raw_html: str) -> str:
+    text = _STYLE_SCRIPT_RE.sub("", raw_html)
+    text = _BLOCK_TAG_RE.sub("\n", text)
+    text = _TAG_RE.sub("", text)
+    text = html.unescape(text)
+    text = _BLANK_LINES_RE.sub("\n\n", text)
+    return text
+
+
 def _get_body(msg: email.message.Message) -> str:
+    plain, rich = "", ""
     if msg.is_multipart():
         for part in msg.walk():
             ctype = part.get_content_type()
-            if ctype in ("text/plain", "text/html"):
-                payload = part.get_payload(decode=True)
-                if payload:
-                    return payload.decode(part.get_content_charset() or "utf-8", errors="replace")
-        return ""
-    payload = msg.get_payload(decode=True)
-    return payload.decode(msg.get_content_charset() or "utf-8", errors="replace") if payload else ""
+            payload = part.get_payload(decode=True)
+            if not payload:
+                continue
+            decoded = payload.decode(part.get_content_charset() or "utf-8", errors="replace")
+            if ctype == "text/plain" and not plain:
+                plain = decoded
+            elif ctype == "text/html" and not rich:
+                rich = decoded
+    else:
+        payload = msg.get_payload(decode=True)
+        decoded = payload.decode(msg.get_content_charset() or "utf-8", errors="replace") if payload else ""
+        if msg.get_content_type() == "text/html":
+            rich = decoded
+        else:
+            plain = decoded
+
+    if plain:
+        return plain
+    if rich:
+        return _html_to_text(rich)
+    return ""
 
 
 class EmailWatcher:
