@@ -1,6 +1,7 @@
 """Polls an IMAP inbox for Bravos Research trade notification emails."""
 
 import email
+import email.message
 import imaplib
 import re
 from dataclasses import dataclass
