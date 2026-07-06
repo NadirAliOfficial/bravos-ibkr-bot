@@ -14,8 +14,12 @@ portfolio allocation weight, take-profit levels, and stop-loss.
 - Regex-based trade classification: OPEN / PARTIAL_CLOSE / CLOSE
 - Extraction of ticker, price, allocation weight, take-profit levels, stop-loss
 - SQLite-backed signal store, ready for a downstream execution engine
+- Telegram approve/reject workflow for every signal before any order is sent
+- Interactive Brokers order placement via `ib_insync` (bracket orders for new
+  positions, plain sells for partial/full closes)
 - Test suite built from real alert samples (new position, partial profit
-  booking, full close, informational update)
+  booking, full close, informational update) plus position-sizing and
+  Telegram message formatting unit tests
 
 ## Setup
 
@@ -46,27 +50,50 @@ by the main loop.
 
 ## Run
 
+Two processes run side by side, sharing the same `signals.db`:
+
 ```bash
-python main.py
+python main.py           # polls the inbox, parses alerts, stores signals
+python telegram_bot.py   # sends new signals to Telegram, executes on approval
 ```
 
-Polls the inbox every `POLL_INTERVAL_SECONDS` (default 60s), fetches new
-Bravos alerts, and logs/stores each parsed signal.
+`main.py` polls the inbox every `POLL_INTERVAL_SECONDS` (default 60s).
+`telegram_bot.py` checks for newly-parsed signals every
+`APPROVAL_POLL_INTERVAL_SECONDS` (default 30s), sends each one to Telegram
+with Approve/Reject buttons, and on approval places the order through IBKR
+(TWS or IB Gateway must be running with the API enabled on `IBKR_PORT`).
+
+### IBKR order sizing
+
+Bravos gives a 1-10 "weight" per trade, not a literal percentage. `config.py`
+converts that to a fraction of account equity via `WEIGHT_UNIT_PCT`
+(default: weight 5 = 10% of the account). **Confirm the right multiplier
+with the client before trading live** — this is a placeholder default, not a
+confirmed value.
+
+New positions (`OPEN`) place a bracket order: a limit buy plus one
+take-profit leg and one stop-loss leg. IBKR's native bracket only supports a
+single TP/SL pair per parent order — when Bravos gives multiple take-profit
+levels, the nearest one is used. `PARTIAL_CLOSE` and `CLOSE` place plain
+market sells, sized off the live IBKR position and the weight ratio in the
+alert.
 
 ## Tests
 
 ```bash
-python -m pytest test_parser.py -v
+python -m pytest -v
 ```
 
-Covers 5 real-world alert types: new position (SOFI), partial profit
-booking (EXEL, GS), close (LSCC, ASML), and a non-trade info update.
+Covers 5 real-world alert types (new position, partial profit booking, full
+close, non-trade info update), position-sizing math for all three signal
+types, and Telegram message formatting/keyboard construction. IBKR order
+placement itself isn't covered by these tests — it requires a live TWS/IB
+Gateway connection to exercise.
 
 ## Roadmap
 
-This repo covers notification parsing and signal generation. Planned next:
+Phases 1 and 2 (notification parsing, signal generation, IBKR execution,
+Telegram approval) are covered here. Planned next:
 
-- Interactive Brokers order placement via the TWS API
-- Telegram approve/reject workflow before any order is sent
 - Backup stop-loss monitoring (Bravos doesn't always publish one)
 - VPS deployment for always-on monitoring

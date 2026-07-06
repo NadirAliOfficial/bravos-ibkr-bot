@@ -21,16 +21,37 @@ CREATE TABLE IF NOT EXISTS signals (
     published_date TEXT,
     raw_text TEXT,
     received_at TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending'
+    status TEXT NOT NULL DEFAULT 'pending',
+    telegram_message_id INTEGER,
+    decided_at TEXT,
+    ibkr_order_ids TEXT,
+    error TEXT
 );
 """
+
+# Columns added after the original Phase 1 schema — applied via ALTER TABLE so
+# an existing signals.db from Phase 1 upgrades in place instead of needing a
+# fresh database.
+_MIGRATION_COLUMNS = [
+    ("telegram_message_id", "INTEGER"),
+    ("decided_at", "TEXT"),
+    ("ibkr_order_ids", "TEXT"),
+    ("error", "TEXT"),
+]
 
 
 class SignalStore:
     def __init__(self, db_path: str = config.SIGNALS_DB_PATH):
         self.conn = sqlite3.connect(db_path)
         self.conn.execute(SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self):
+        existing = {row[1] for row in self.conn.execute("PRAGMA table_info(signals)")}
+        for name, coltype in _MIGRATION_COLUMNS:
+            if name not in existing:
+                self.conn.execute(f"ALTER TABLE signals ADD COLUMN {name} {coltype}")
 
     def close(self):
         self.conn.close()
@@ -74,3 +95,53 @@ class SignalStore:
         )
         cols = [c[0] for c in cur.description]
         return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    def get(self, signal_id: int) -> dict | None:
+        cur = self.conn.execute("SELECT * FROM signals WHERE id = ?", (signal_id,))
+        row = cur.fetchone()
+        if row is None:
+            return None
+        cols = [c[0] for c in cur.description]
+        return dict(zip(cols, row))
+
+    def get_by_telegram_message_id(self, telegram_message_id: int) -> dict | None:
+        cur = self.conn.execute(
+            "SELECT * FROM signals WHERE telegram_message_id = ?", (telegram_message_id,)
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        cols = [c[0] for c in cur.description]
+        return dict(zip(cols, row))
+
+    def mark_sent(self, signal_id: int, telegram_message_id: int):
+        self.conn.execute(
+            "UPDATE signals SET status = 'sent', telegram_message_id = ? WHERE id = ?",
+            (telegram_message_id, signal_id),
+        )
+        self.conn.commit()
+
+    def mark_rejected(self, signal_id: int):
+        self.conn.execute(
+            "UPDATE signals SET status = 'rejected', decided_at = datetime('now') WHERE id = ?",
+            (signal_id,),
+        )
+        self.conn.commit()
+
+    def mark_executed(self, signal_id: int, ibkr_order_ids: list[int]):
+        self.conn.execute(
+            """UPDATE signals
+               SET status = 'executed', decided_at = datetime('now'), ibkr_order_ids = ?
+               WHERE id = ?""",
+            (json.dumps(ibkr_order_ids), signal_id),
+        )
+        self.conn.commit()
+
+    def mark_failed(self, signal_id: int, error: str):
+        self.conn.execute(
+            """UPDATE signals
+               SET status = 'failed', decided_at = datetime('now'), error = ?
+               WHERE id = ?""",
+            (error, signal_id),
+        )
+        self.conn.commit()

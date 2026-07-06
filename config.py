@@ -18,3 +18,21 @@ BROWSER_PROFILE_DIR = os.getenv("BROWSER_PROFILE_DIR", ".browser_profile")
 POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 
 SIGNALS_DB_PATH = os.getenv("SIGNALS_DB_PATH", "signals.db")
+
+# --- Phase 2: IBKR + Telegram ---
+
+IBKR_HOST = os.getenv("IBKR_HOST", "127.0.0.1")
+IBKR_PORT = int(os.getenv("IBKR_PORT", "7497"))  # 7497 TWS paper, 7496 TWS live
+IBKR_CLIENT_ID = int(os.getenv("IBKR_CLIENT_ID", "17"))
+IBKR_ACCOUNT = os.getenv("IBKR_ACCOUNT", "")
+
+# Bravos "weight" is a 1-10 sizing scale, not a literal percentage. This maps
+# one weight point to a fraction of total account equity — confirm the right
+# multiplier with the client before going live; 0.02 (weight 5 = 10% of
+# portfolio) is a placeholder default.
+WEIGHT_UNIT_PCT = float(os.getenv("WEIGHT_UNIT_PCT", "0.02"))
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+APPROVAL_POLL_INTERVAL_SECONDS = int(os.getenv("APPROVAL_POLL_INTERVAL_SECONDS", "30"))
