@@ -105,7 +105,7 @@ class EmailWatcher:
 
         alerts = []
         for uid in data[0].split():
-            status, msg_data = self.conn.fetch(uid, "(RFC822)")
+            status, msg_data = self.conn.fetch(uid, "(BODY.PEEK[])")
             if status != "OK":
                 continue
             msg = email.message_from_bytes(msg_data[0][1])

@@ -38,14 +38,23 @@ class ArticleFetcher:
             self._playwright.stop()
 
     def ensure_logged_in(self) -> bool:
-        """Returns False if the session looks logged out (needs manual login)."""
+        """Returns False if the session looks logged out (needs login)."""
+        cookies = self._context.cookies("https://bravosresearch.com")
+        return any(c["name"].startswith("wordpress_logged_in_") for c in cookies)
+
+    def login(self, email: str, password: str):
+        """Logs in and checks Remember Me so the session cookie persists across
+        restarts — without it, WordPress issues a session-only cookie that's
+        lost the moment the browser process closes."""
         page = self._context.new_page()
         try:
             page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=30000)
-            logged_in = page.locator("text=Log Out").count() > 0 or page.locator(
-                "text=My Account"
-            ).count() > 0
-            return logged_in
+            form = page.locator("form.woocommerce-form-login").nth(1)
+            form.locator("#username").fill(email)
+            form.locator("#password").fill(password)
+            form.locator('input[name="rememberme"]').check()
+            form.locator('button[name="login"]').click()
+            page.wait_for_load_state("networkidle", timeout=30000)
         finally:
             page.close()
 
@@ -76,10 +85,21 @@ def manual_login(profile_dir: str = config.BROWSER_PROFILE_DIR):
         context.close()
 
 
+def auto_login():
+    """Logs in headlessly using BRAVOS_EMAIL/BRAVOS_PASSWORD from .env — used for
+    testing when credentials are already on hand, as an alternative to the
+    manual, human-in-the-browser login above."""
+    with ArticleFetcher() as fetcher:
+        fetcher.login(config.BRAVOS_EMAIL, config.BRAVOS_PASSWORD)
+        print("Logged in:", fetcher.ensure_logged_in())
+
+
 if __name__ == "__main__":
     import sys
 
     if len(sys.argv) > 1 and sys.argv[1] == "login":
         manual_login()
+    elif len(sys.argv) > 1 and sys.argv[1] == "auto-login":
+        auto_login()
     else:
-        print("Usage: python fetcher.py login")
+        print("Usage: python fetcher.py login | auto-login")

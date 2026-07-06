@@ -10,6 +10,8 @@ IMAP_USER = os.getenv("IMAP_USER", "")
 IMAP_PASSWORD = os.getenv("IMAP_PASSWORD", "")
 IMAP_FOLDER = os.getenv("IMAP_FOLDER", "INBOX")
 BRAVOS_SENDER_FILTER = os.getenv("BRAVOS_SENDER_FILTER", "bravosresearch.com")
+BRAVOS_EMAIL = os.getenv("BRAVOS_EMAIL", "")
+BRAVOS_PASSWORD = os.getenv("BRAVOS_PASSWORD", "")
 
 BROWSER_PROFILE_DIR = os.getenv("BROWSER_PROFILE_DIR", ".browser_profile")
 
