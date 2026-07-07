@@ -96,6 +96,14 @@ class SignalStore:
         cols = [c[0] for c in cur.description]
         return [dict(zip(cols, row)) for row in cur.fetchall()]
 
+    def recent_signals(self, limit: int = 5) -> list[dict]:
+        cur = self.conn.execute(
+            "SELECT * FROM signals WHERE action != ? ORDER BY id DESC LIMIT ?",
+            (TradeAction.INFO.value, limit),
+        )
+        cols = [c[0] for c in cur.description]
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+
     def get(self, signal_id: int) -> dict | None:
         cur = self.conn.execute("SELECT * FROM signals WHERE id = ?", (signal_id,))
         row = cur.fetchone()

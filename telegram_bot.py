@@ -6,7 +6,7 @@ import json
 import logging
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
 import config
 from execution import ExecutionError, execute_signal_sync
@@ -19,6 +19,25 @@ ACTION_LABELS = {
     "PARTIAL_CLOSE": "\U0001F7E1 PARTIAL CLOSE",
     "CLOSE": "\U0001F534 CLOSE",
 }
+
+STATUS_LABELS = {
+    "pending": "⏳ pending",
+    "sent": "\U0001F4E9 awaiting your decision",
+    "approved": "✅ approved",
+    "rejected": "❌ rejected",
+    "executed": "✅ executed",
+    "failed": "⚠️ failed",
+}
+
+WELCOME_MESSAGE = (
+    "\U0001F44B Welcome to the IBKR Bravos Bot!\n\n"
+    "This bot watches your Bravos Research subscription for new trade alerts "
+    "(new positions, partial profit bookings, and closes) and sends each one "
+    "here for you to review.\n\n"
+    "Tap ✅ Approve to place the trade in your Interactive Brokers account, "
+    "or ❌ Reject to skip it. Nothing is ever traded without your approval.\n\n"
+    "Use /status anytime to see recent signal activity."
+)
 
 
 def format_signal_message(signal: dict) -> str:
@@ -53,6 +72,29 @@ def approval_keyboard(signal_id: int) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(WELCOME_MESSAGE)
+
+
+async def handle_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    store = SignalStore()
+    try:
+        rows = store.recent_signals(limit=5)
+    finally:
+        store.close()
+
+    if not rows:
+        await update.message.reply_text("No trade signals yet.")
+        return
+
+    lines = ["Recent signals:", ""]
+    for row in rows:
+        label = ACTION_LABELS.get(row["action"], row["action"])
+        status = STATUS_LABELS.get(row["status"], row["status"])
+        lines.append(f"{label} {row['ticker']} — {status}")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def send_pending_signals(context: ContextTypes.DEFAULT_TYPE):
@@ -114,6 +156,8 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", handle_start))
+    app.add_handler(CommandHandler("status", handle_status))
     app.add_handler(CallbackQueryHandler(handle_decision))
     app.job_queue.run_repeating(
         send_pending_signals, interval=config.APPROVAL_POLL_INTERVAL_SECONDS, first=0

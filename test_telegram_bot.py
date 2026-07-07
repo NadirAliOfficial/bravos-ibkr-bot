@@ -1,6 +1,6 @@
 import json
 
-from telegram_bot import approval_keyboard, format_signal_message
+from telegram_bot import STATUS_LABELS, WELCOME_MESSAGE, approval_keyboard, format_signal_message
 
 OPEN_SIGNAL = {
     "action": "OPEN",
@@ -52,3 +52,13 @@ def test_approval_keyboard_callback_data():
     buttons = kb.inline_keyboard[0]
     assert buttons[0].callback_data == "approve:42"
     assert buttons[1].callback_data == "reject:42"
+
+
+def test_welcome_message_mentions_approve_reject():
+    assert "Approve" in WELCOME_MESSAGE
+    assert "Reject" in WELCOME_MESSAGE
+
+
+def test_status_labels_cover_all_lifecycle_states():
+    for state in ("pending", "sent", "approved", "rejected", "executed", "failed"):
+        assert state in STATUS_LABELS
