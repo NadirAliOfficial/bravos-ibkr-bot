@@ -58,7 +58,7 @@ def main():
         except Exception:
             log.exception("Failed to send fill notification for order %s", trade.order.orderId)
 
-    ib.fillEvent += on_fill
+    ib.execDetailsEvent += on_fill
     log.info("Watching for IBKR order fills...")
     ib.run()
 
