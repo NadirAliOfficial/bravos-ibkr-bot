@@ -52,6 +52,17 @@ We are closing our position in ASML Holding (ASML) at $1,775 as price has broken
 This trade was entered on May 21, 2026, at $1,564.48, we booked partial profits on June 09, 2026, at $1,825.06, and we booked further partial profits on June 30, 2026, at $1,985.
 """
 
+HROW_INCREASE_BODY = """
+07/07/2026
+Save Post
+Already Read
+We are increasing our position in Harrow Inc (HROW) at $45.05, and increasing the weight from 3 to 6 as the stock continues to hold above its recent breakout level and confirms the strength of the setup.
+
+Since breaking above resistance, Harrow has successfully held the breakout area as support, reinforcing the constructive technical picture that we highlighted when initiating the starter position.
+
+This position was entered on July 06, 2026, at $43.43.
+"""
+
 INFO_BODY = """
 07/03/2026
 Save post
@@ -119,6 +130,19 @@ def test_close_asml():
     assert s.action == TradeAction.CLOSE
     assert s.ticker == "ASML"
     assert s.price == 1775
+
+
+def test_increase_hrow():
+    s = parse_trade(
+        "Increasing Exposure to Harrow Inc ($HROW) | Technical Strength",
+        "https://bravosresearch.com/news-feed/increasing-exposure-to-harrow-inc-hrow-technical-strength/",
+        HROW_INCREASE_BODY,
+    )
+    assert s.action == TradeAction.INCREASE
+    assert s.ticker == "HROW"
+    assert s.price == 45.05
+    assert s.weight_from == 3
+    assert s.weight_to == 6
 
 
 def test_info_update_ignored():

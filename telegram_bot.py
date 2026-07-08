@@ -18,6 +18,7 @@ log = logging.getLogger("telegram-bot")
 
 ACTION_LABELS = {
     "OPEN": "\U0001F7E2 OPEN",
+    "INCREASE": "\U0001F7E2 INCREASE",
     "PARTIAL_CLOSE": "\U0001F7E1 PARTIAL CLOSE",
     "CLOSE": "\U0001F534 CLOSE",
 }
@@ -57,7 +58,7 @@ def format_signal_message(signal: dict) -> str:
             f"<b>Take profit(s):</b> {tps_str}",
             f"<b>Stop loss:</b> ${signal['stop_loss']}",
         ]
-    elif action == "PARTIAL_CLOSE":
+    elif action in ("PARTIAL_CLOSE", "INCREASE"):
         lines += [
             f"<b>Price:</b> ${signal['price']}",
             f"<b>Weight:</b> {signal['weight_from']} → {signal['weight_to']}",

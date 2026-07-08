@@ -10,7 +10,12 @@ import json
 
 from ibkr_client import IBKRClient
 from models import TradeAction
-from position_sizing import close_quantity, open_quantity, partial_close_quantity
+from position_sizing import (
+    close_quantity,
+    increase_quantity,
+    open_quantity,
+    partial_close_quantity,
+)
 
 
 class ExecutionError(Exception):
@@ -47,6 +52,19 @@ def execute_signal_sync(signal: dict) -> list[int]:
                 stop_loss=signal["stop_loss"],
             )
             return [t.order.orderId for t in trades]
+
+        if action == TradeAction.INCREASE:
+            net_liq = client.net_liquidation()
+            qty = increase_quantity(
+                net_liq, signal["weight_from"] or 0, signal["weight_to"] or 0, signal["price"] or 0
+            )
+            if qty <= 0:
+                raise ExecutionError(
+                    f"Computed order size was 0 (net_liq={net_liq}, "
+                    f"weight {signal['weight_from']}->{signal['weight_to']}, price={signal['price']})"
+                )
+            trade = client.place_buy(ticker, qty)
+            return [trade.order.orderId]
 
         if action == TradeAction.PARTIAL_CLOSE:
             current = client.position_size(ticker)

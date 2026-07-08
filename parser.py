@@ -3,6 +3,7 @@ import re
 from models import TradeAction, TradeSignal
 
 OPEN_TITLE_RE = re.compile(r"\b(Initiating|Opening)\b", re.I)
+INCREASE_TITLE_RE = re.compile(r"\bIncreasing\b", re.I)
 PARTIAL_TITLE_RE = re.compile(r"\b(Booking Partial Profits|Trimming|Reducing)\b", re.I)
 CLOSE_TITLE_RE = re.compile(r"\bClosing\b", re.I)
 
@@ -32,6 +33,8 @@ def classify_action(title: str) -> TradeAction:
         return TradeAction.PARTIAL_CLOSE
     if CLOSE_TITLE_RE.search(title):
         return TradeAction.CLOSE
+    if INCREASE_TITLE_RE.search(title):
+        return TradeAction.INCREASE
     if OPEN_TITLE_RE.search(title):
         return TradeAction.OPEN
     return TradeAction.INFO
@@ -86,7 +89,7 @@ def parse_trade(title: str, url: str, body_text: str) -> TradeSignal:
         if sl_m:
             signal.stop_loss = _to_float(sl_m.group(1))
 
-    elif action == TradeAction.PARTIAL_CLOSE:
+    elif action in (TradeAction.PARTIAL_CLOSE, TradeAction.INCREASE):
         wm = WEIGHT_FROM_TO_RE.search(body_text) or WEIGHT_FROM_TO_ALT_RE.search(body_text)
         if wm:
             signal.weight_from = _to_float(wm.group(1))

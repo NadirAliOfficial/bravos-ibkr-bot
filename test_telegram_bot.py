@@ -28,6 +28,15 @@ CLOSE_SIGNAL = {
     "price": 140.0,
 }
 
+INCREASE_SIGNAL = {
+    "action": "INCREASE",
+    "ticker": "HROW",
+    "title": "Increasing Exposure to Harrow Inc ($HROW) | Technical Strength",
+    "price": 45.05,
+    "weight_from": 3.0,
+    "weight_to": 6.0,
+}
+
 
 def test_format_open_signal_includes_key_fields():
     text = format_signal_message(OPEN_SIGNAL)
@@ -47,6 +56,12 @@ def test_format_signal_message_escapes_html_special_chars():
 def test_format_partial_close_shows_weight_transition():
     text = format_signal_message(PARTIAL_SIGNAL)
     assert "6.0 → 4.0" in text
+
+
+def test_format_increase_shows_weight_transition():
+    text = format_signal_message(INCREASE_SIGNAL)
+    assert "3.0 → 6.0" in text
+    assert "$45.05" in text
 
 
 def test_format_close_shows_price():

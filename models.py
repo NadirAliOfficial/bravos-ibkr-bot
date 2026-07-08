@@ -6,6 +6,7 @@ from typing import Optional
 
 class TradeAction(str, Enum):
     OPEN = "OPEN"
+    INCREASE = "INCREASE"
     PARTIAL_CLOSE = "PARTIAL_CLOSE"
     CLOSE = "CLOSE"
     INFO = "INFO"

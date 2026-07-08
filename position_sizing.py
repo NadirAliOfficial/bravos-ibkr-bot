@@ -15,6 +15,18 @@ def open_quantity(net_liquidation: float, weight: float, price: float) -> int:
     return math.floor(allocation / price)
 
 
+def increase_quantity(
+    net_liquidation: float, weight_from: float, weight_to: float, price: float
+) -> int:
+    """Additional shares to buy for an INCREASE signal — sized off the weight
+    delta (new target minus old), not the full new weight, since the original
+    allocation is already held."""
+    if price <= 0 or net_liquidation <= 0 or weight_to <= weight_from:
+        return 0
+    allocation = net_liquidation * (weight_to - weight_from) * config.WEIGHT_UNIT_PCT
+    return math.floor(allocation / price)
+
+
 def partial_close_quantity(current_shares: int, weight_from: float, weight_to: float) -> int:
     """Shares to sell for a PARTIAL_CLOSE signal, proportional to the weight drop."""
     if current_shares <= 0 or weight_from <= 0 or weight_to >= weight_from:

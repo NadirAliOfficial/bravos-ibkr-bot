@@ -118,3 +118,12 @@ class IBKRClient:
         order = MarketOrder("SELL", quantity)
         _apply_common_fields(order, account)
         return self.ib.placeOrder(contract, order)
+
+    def place_buy(self, ticker: str, quantity: int, account: str = ""):
+        """Plain market buy — used for INCREASE signals (adding to an
+        existing position). Doesn't touch the original bracket's TP/SL."""
+        account = account or config.IBKR_ACCOUNT
+        contract = self._qualified_stock(ticker)
+        order = MarketOrder("BUY", quantity)
+        _apply_common_fields(order, account)
+        return self.ib.placeOrder(contract, order)

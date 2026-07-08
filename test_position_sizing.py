@@ -1,5 +1,10 @@
 import config
-from position_sizing import close_quantity, open_quantity, partial_close_quantity
+from position_sizing import (
+    close_quantity,
+    increase_quantity,
+    open_quantity,
+    partial_close_quantity,
+)
 
 
 def test_open_quantity_basic(monkeypatch):
@@ -18,6 +23,19 @@ def test_open_quantity_zero_on_bad_input():
     assert open_quantity(0, 5, 50) == 0
     assert open_quantity(100_000, 0, 50) == 0
     assert open_quantity(100_000, 5, 0) == 0
+
+
+def test_increase_quantity_sizes_off_weight_delta(monkeypatch):
+    monkeypatch.setattr(config, "WEIGHT_UNIT_PCT", 0.02)
+    # Harrow real example: weight 3 -> 6 (delta 3), $45.05, on a small account
+    # $10,000 * 0.02 * 3 = $600 allocation / $45.05 = 13.3.. -> 13 shares
+    assert increase_quantity(net_liquidation=10_000, weight_from=3, weight_to=6, price=45.05) == 13
+
+
+def test_increase_quantity_invalid_returns_zero():
+    assert increase_quantity(0, 3, 6, 45.05) == 0
+    assert increase_quantity(10_000, 6, 3, 45.05) == 0  # weight decreased, not an increase
+    assert increase_quantity(10_000, 3, 6, 0) == 0
 
 
 def test_partial_close_quantity_matches_weight_ratio():
