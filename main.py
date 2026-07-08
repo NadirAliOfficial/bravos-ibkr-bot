@@ -58,7 +58,17 @@ def main():
                 try:
                     run_once(watcher, fetcher, store)
                 except Exception:
-                    log.exception("Error during poll cycle")
+                    # IMAP connections get dropped by the mail server after
+                    # sitting idle (Gmail in particular). Without reconnecting
+                    # here, every future cycle would hit the same dead socket
+                    # and silently never see new mail again.
+                    log.exception("Error during poll cycle — reconnecting IMAP")
+                    try:
+                        watcher.close()
+                    except Exception:
+                        pass
+                    watcher = EmailWatcher()
+                    watcher.connect()
                 time.sleep(config.POLL_INTERVAL_SECONDS)
     finally:
         watcher.close()
