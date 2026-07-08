@@ -112,6 +112,15 @@ class SignalStore:
         cols = [c[0] for c in cur.description]
         return dict(zip(cols, row))
 
+    def find_by_order_id(self, order_id: int) -> dict | None:
+        cur = self.conn.execute("SELECT * FROM signals WHERE ibkr_order_ids IS NOT NULL")
+        cols = [c[0] for c in cur.description]
+        for row in cur.fetchall():
+            record = dict(zip(cols, row))
+            if order_id in json.loads(record["ibkr_order_ids"] or "[]"):
+                return record
+        return None
+
     def get_by_telegram_message_id(self, telegram_message_id: int) -> dict | None:
         cur = self.conn.execute(
             "SELECT * FROM signals WHERE telegram_message_id = ?", (telegram_message_id,)

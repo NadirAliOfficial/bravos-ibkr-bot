@@ -24,6 +24,10 @@ SIGNALS_DB_PATH = os.getenv("SIGNALS_DB_PATH", "signals.db")
 IBKR_HOST = os.getenv("IBKR_HOST", "127.0.0.1")
 IBKR_PORT = int(os.getenv("IBKR_PORT", "7497"))  # 7497 TWS paper, 7496 TWS live
 IBKR_CLIENT_ID = int(os.getenv("IBKR_CLIENT_ID", "17"))
+# The fill watcher holds its own persistent connection alongside the
+# short-lived one execution.py opens per order — each IBKR API client needs a
+# distinct clientId, or Gateway rejects the second connection.
+IBKR_WATCHER_CLIENT_ID = int(os.getenv("IBKR_WATCHER_CLIENT_ID", "18"))
 IBKR_ACCOUNT = os.getenv("IBKR_ACCOUNT", "")
 
 # Bravos "weight" is a 1-10 sizing scale, not a literal percentage. This maps
