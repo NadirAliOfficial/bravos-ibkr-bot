@@ -37,6 +37,9 @@ IBKR_ACCOUNT = os.getenv("IBKR_ACCOUNT", "")
 WEIGHT_UNIT_PCT = float(os.getenv("WEIGHT_UNIT_PCT", "0.02"))
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+# Comma-separated list — every signal and fill notification goes to all of
+# these chats. Any one recipient can approve/reject; the others' copies get
+# updated to match so nobody double-approves.
+TELEGRAM_CHAT_IDS = [c.strip() for c in os.getenv("TELEGRAM_CHAT_IDS", "").split(",") if c.strip()]
 
 APPROVAL_POLL_INTERVAL_SECONDS = int(os.getenv("APPROVAL_POLL_INTERVAL_SECONDS", "30"))

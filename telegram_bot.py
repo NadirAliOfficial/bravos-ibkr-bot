@@ -107,23 +107,42 @@ async def send_pending_signals(context: ContextTypes.DEFAULT_TYPE):
     store = SignalStore()
     try:
         for signal in store.pending_trade_signals():
-            message = await context.bot.send_message(
-                chat_id=config.TELEGRAM_CHAT_ID,
-                text=format_signal_message(signal),
-                parse_mode=ParseMode.HTML,
-                reply_markup=approval_keyboard(signal["id"]),
-            )
-            store.mark_sent(signal["id"], message.message_id)
-            log.info("Sent signal %s to Telegram for approval", signal["id"])
+            text = format_signal_message(signal)
+            keyboard = approval_keyboard(signal["id"])
+            sent = []
+            for chat_id in config.TELEGRAM_CHAT_IDS:
+                message = await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=text,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=keyboard,
+                )
+                sent.append([chat_id, message.message_id])
+            store.mark_sent(signal["id"], sent)
+            log.info("Sent signal %s to %d Telegram recipient(s)", signal["id"], len(sent))
     finally:
         store.close()
 
 
-async def _send_outcome(query, text: str):
-    """Removes the Approve/Reject buttons from the original alert and sends the
-    outcome as its own separate message, rather than editing the alert text."""
-    await query.edit_message_reply_markup(reply_markup=None)
-    await query.message.reply_text(text, parse_mode=ParseMode.HTML)
+async def _sync_outcome(context: ContextTypes.DEFAULT_TYPE, signal: dict, text: str):
+    """Removes the Approve/Reject buttons and posts the outcome in every chat
+    this signal was sent to, so all recipients see the same result and nobody
+    approves twice from a stale copy of the alert."""
+    for chat_id, message_id in json.loads(signal["telegram_messages"] or "[]"):
+        try:
+            await context.bot.edit_message_reply_markup(
+                chat_id=chat_id, message_id=message_id, reply_markup=None
+            )
+        except Exception:
+            log.exception(
+                "Failed to clear buttons for signal %s in chat %s", signal["id"], chat_id
+            )
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
+        except Exception:
+            log.exception(
+                "Failed to send outcome for signal %s to chat %s", signal["id"], chat_id
+            )
 
 
 async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -137,30 +156,35 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         signal = store.get(signal_id)
         if signal is None or signal["status"] != "sent":
-            await _send_outcome(query, "<b>Status:</b> Already handled")
+            await query.edit_message_reply_markup(reply_markup=None)
+            await query.message.reply_text(
+                "<b>Status:</b> Already handled", parse_mode=ParseMode.HTML
+            )
             return
 
         if decision == "reject":
             store.mark_rejected(signal_id)
-            await _send_outcome(query, "<b>Status:</b> Rejected")
+            await _sync_outcome(context, signal, "<b>Status:</b> Rejected")
             return
 
         try:
             order_ids = await asyncio.to_thread(execute_signal_sync, signal)
         except ExecutionError as e:
             store.mark_failed(signal_id, str(e))
-            await _send_outcome(query, f"<b>Status:</b> Failed\n<i>{escape(str(e))}</i>")
+            await _sync_outcome(context, signal, f"<b>Status:</b> Failed\n<i>{escape(str(e))}</i>")
             return
         except Exception as e:
             store.mark_failed(signal_id, str(e))
-            await _send_outcome(query, f"<b>Status:</b> IBKR error\n<i>{escape(str(e))}</i>")
+            await _sync_outcome(
+                context, signal, f"<b>Status:</b> IBKR error\n<i>{escape(str(e))}</i>"
+            )
             log.exception("Unexpected error executing signal %s", signal_id)
             return
 
         store.mark_executed(signal_id, order_ids)
         order_ids_str = ", ".join(str(i) for i in order_ids)
-        await _send_outcome(
-            query, f"<b>Status:</b> Executed\n<b>Order IDs:</b> {order_ids_str}"
+        await _sync_outcome(
+            context, signal, f"<b>Status:</b> Executed\n<b>Order IDs:</b> {order_ids_str}"
         )
     finally:
         store.close()

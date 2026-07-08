@@ -37,6 +37,9 @@ _MIGRATION_COLUMNS = [
     ("decided_at", "TEXT"),
     ("ibkr_order_ids", "TEXT"),
     ("error", "TEXT"),
+    # JSON list of [chat_id, message_id] pairs — one signal can be sent to
+    # several Telegram recipients at once (see config.TELEGRAM_CHAT_IDS).
+    ("telegram_messages", "TEXT"),
 ]
 
 
@@ -121,20 +124,10 @@ class SignalStore:
                 return record
         return None
 
-    def get_by_telegram_message_id(self, telegram_message_id: int) -> dict | None:
-        cur = self.conn.execute(
-            "SELECT * FROM signals WHERE telegram_message_id = ?", (telegram_message_id,)
-        )
-        row = cur.fetchone()
-        if row is None:
-            return None
-        cols = [c[0] for c in cur.description]
-        return dict(zip(cols, row))
-
-    def mark_sent(self, signal_id: int, telegram_message_id: int):
+    def mark_sent(self, signal_id: int, chat_message_pairs: list[tuple[str, int]]):
         self.conn.execute(
-            "UPDATE signals SET status = 'sent', telegram_message_id = ? WHERE id = ?",
-            (telegram_message_id, signal_id),
+            "UPDATE signals SET status = 'sent', telegram_messages = ? WHERE id = ?",
+            (json.dumps(chat_message_pairs), signal_id),
         )
         self.conn.commit()
 

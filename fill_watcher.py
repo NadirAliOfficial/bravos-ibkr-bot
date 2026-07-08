@@ -28,11 +28,12 @@ def format_fill_message(trade, fill) -> str:
 
 
 def send_telegram_message(text: str):
-    httpx.post(
-        TELEGRAM_API,
-        data={"chat_id": config.TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML"},
-        timeout=10,
-    ).raise_for_status()
+    for chat_id in config.TELEGRAM_CHAT_IDS:
+        httpx.post(
+            TELEGRAM_API,
+            data={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            timeout=10,
+        ).raise_for_status()
 
 
 def main():
