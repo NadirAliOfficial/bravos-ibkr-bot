@@ -8,6 +8,8 @@ Known IBKR gotchas this respects:
   multiple IBKR accounts and orders otherwise route to the wrong one
 """
 
+import asyncio
+
 from ib_insync import IB, LimitOrder, MarketOrder, Stock, StopOrder
 
 import config
@@ -25,6 +27,15 @@ class IBKRClient:
         self.ib = IB()
 
     def connect(self):
+        # ib_insync needs an asyncio event loop in the calling thread. When this
+        # runs via asyncio.to_thread() (as it does from the Telegram bot), the
+        # worker thread has none by default — asyncio.get_event_loop() raises
+        # rather than creating one, since Python 3.10+.
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+
         self.ib.connect(config.IBKR_HOST, config.IBKR_PORT, clientId=config.IBKR_CLIENT_ID)
         self.ib.reqMarketDataType(1)
 
