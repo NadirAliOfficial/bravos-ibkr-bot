@@ -33,8 +33,15 @@ def test_format_open_signal_includes_key_fields():
     text = format_signal_message(OPEN_SIGNAL)
     assert "HROW" in text
     assert "$43.43" in text
-    assert "[50.0, 54.0, 60.0]" in text
+    assert "50.0, 54.0, 60.0" in text
     assert "$40.0" in text
+
+
+def test_format_signal_message_escapes_html_special_chars():
+    signal = dict(OPEN_SIGNAL, ticker="A&B", title="Trend <up> & strong")
+    text = format_signal_message(signal)
+    assert "A&amp;B" in text
+    assert "&lt;up&gt;" in text
 
 
 def test_format_partial_close_shows_weight_transition():
