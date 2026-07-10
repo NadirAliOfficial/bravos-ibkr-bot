@@ -52,6 +52,23 @@ We are closing our position in ASML Holding (ASML) at $1,775 as price has broken
 This trade was entered on May 21, 2026, at $1,564.48, we booked partial profits on June 09, 2026, at $1,825.06, and we booked further partial profits on June 30, 2026, at $1,985.
 """
 
+QUANT_MODERATE_BODY = """
+06/30/2026
+Save Post
+The Tactical Signal Model is updating today from CASH to MODERATE
+
+This model is separate from our discretionary service
+The model tells us the broader market environment. Our Active Trade Ideas are managed separately, with their own entry points, position sizing, and stops.
+"""
+
+QUANT_AGGRESSIVE_BODY = """
+05/19/2026
+Save Post
+The Tactical Signal Model is updating today from MODERATE to AGGRESSIVE.
+
+This model is separate from our discretionary service
+"""
+
 HROW_INCREASE_BODY = """
 07/07/2026
 Save Post
@@ -143,6 +160,39 @@ def test_increase_hrow():
     assert s.price == 45.05
     assert s.weight_from == 3
     assert s.weight_to == 6
+
+
+def test_quant_moderate_signal():
+    s = parse_trade(
+        "Model Signal (Moderate)",
+        "https://bravosresearch.com/model-signal/model-signal-moderate-5/",
+        QUANT_MODERATE_BODY,
+    )
+    assert s.action == TradeAction.QUANT
+    assert s.quant_level == "MODERATE"
+    assert s.ticker == "QQQ"
+
+
+def test_quant_aggressive_signal():
+    s = parse_trade(
+        "Model Signal (Aggressive)",
+        "https://bravosresearch.com/model-signal/model-signal-aggressive-2/",
+        QUANT_AGGRESSIVE_BODY,
+    )
+    assert s.action == TradeAction.QUANT
+    assert s.quant_level == "AGGRESSIVE"
+    assert s.ticker == "TQQQ"
+
+
+def test_quant_cash_signal():
+    s = parse_trade(
+        "Model Signal (Cash)",
+        "https://bravosresearch.com/model-signal/model-signal-cash-4/",
+        "The Tactical Signal Model is updating today from MODERATE to CASH.",
+    )
+    assert s.action == TradeAction.QUANT
+    assert s.quant_level == "CASH"
+    assert s.ticker is None
 
 
 def test_info_update_ignored():

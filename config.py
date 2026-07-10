@@ -30,10 +30,32 @@ IBKR_CLIENT_ID = int(os.getenv("IBKR_CLIENT_ID", "17"))
 IBKR_WATCHER_CLIENT_ID = int(os.getenv("IBKR_WATCHER_CLIENT_ID", "18"))
 IBKR_ACCOUNT = os.getenv("IBKR_ACCOUNT", "")
 
+# --- Phase 3: multi-account, multi-login ---
+
+# One IBKR login can hold several accounts (e.g. Jon's TFSA/RRSP/Non-reg all
+# under one username) — that's one "gateway". A spouse or other family
+# member's account needs its own login, which means its own headless Gateway
+# process on a different port/clientId. Each entry here is one running
+# Gateway instance; accounts.json points each account at one of these by name.
+IBKR_GATEWAYS = {
+    "primary": {
+        "host": IBKR_HOST,
+        "port": IBKR_PORT,
+        "client_id": IBKR_CLIENT_ID,
+    },
+    "wife": {
+        "host": os.getenv("IBKR_WIFE_HOST", "127.0.0.1"),
+        "port": int(os.getenv("IBKR_WIFE_PORT", "4003")),
+        "client_id": int(os.getenv("IBKR_WIFE_CLIENT_ID", "27")),
+    },
+}
+
+ACCOUNTS_CONFIG_PATH = os.getenv("ACCOUNTS_CONFIG_PATH", "accounts.json")
+
 # Bravos "weight" is a 1-10 sizing scale, not a literal percentage. This maps
-# one weight point to a fraction of total account equity — confirm the right
-# multiplier with the client before going live; 0.02 (weight 5 = 10% of
-# portfolio) is a placeholder default.
+# one weight point to a fraction of an account's *allocated* capital (not the
+# whole account) — confirm the right multiplier with the client before going
+# live; 0.02 (weight 5 = 10% of allocated capital) is a placeholder default.
 WEIGHT_UNIT_PCT = float(os.getenv("WEIGHT_UNIT_PCT", "0.02"))
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")

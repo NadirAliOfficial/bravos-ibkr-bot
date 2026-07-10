@@ -1,0 +1,47 @@
+[
+  {
+    "account_id": "U1234567",
+    "label": "Jon TFSA",
+    "gateway": "primary",
+    "capital_mode": "percent",
+    "capital_value": 80,
+    "tactical_split": 80,
+    "quant_split": 20
+  },
+  {
+    "account_id": "U2345678",
+    "label": "Jon RRSP",
+    "gateway": "primary",
+    "capital_mode": "fixed",
+    "capital_value": 10000,
+    "tactical_split": 50,
+    "quant_split": 50
+  },
+  {
+    "account_id": "U3456789",
+    "label": "Jon Non-Registered",
+    "gateway": "primary",
+    "capital_mode": "percent",
+    "capital_value": 100,
+    "tactical_split": 100,
+    "quant_split": 0
+  },
+  {
+    "account_id": "U4567890",
+    "label": "Jon Account 4",
+    "gateway": "primary",
+    "capital_mode": "percent",
+    "capital_value": 50,
+    "tactical_split": 0,
+    "quant_split": 100
+  },
+  {
+    "account_id": "U5678901",
+    "label": "Wife's Account",
+    "gateway": "wife",
+    "capital_mode": "percent",
+    "capital_value": 100,
+    "tactical_split": 50,
+    "quant_split": 50
+  }
+]

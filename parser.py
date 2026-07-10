@@ -1,11 +1,12 @@
 import re
 
-from models import TradeAction, TradeSignal
+from models import QUANT_LEVEL_INSTRUMENT, TradeAction, TradeSignal
 
 OPEN_TITLE_RE = re.compile(r"\b(Initiating|Opening)\b", re.I)
 INCREASE_TITLE_RE = re.compile(r"\bIncreasing\b", re.I)
 PARTIAL_TITLE_RE = re.compile(r"\b(Booking Partial Profits|Trimming|Reducing)\b", re.I)
 CLOSE_TITLE_RE = re.compile(r"\bClosing\b", re.I)
+QUANT_TITLE_RE = re.compile(r"Model Signal\s*\((Cash|Moderate|Aggressive)\)", re.I)
 
 TICKER_RE = re.compile(r"\(\$([A-Z]{1,6}(?:\.[A-Z])?)\)")
 COMPANY_RE = re.compile(r"^(.*?)\s*\(\$[A-Z]{1,6}(?:\.[A-Z])?\)")
@@ -29,6 +30,8 @@ def _to_float(s: str) -> float:
 
 
 def classify_action(title: str) -> TradeAction:
+    if QUANT_TITLE_RE.search(title):
+        return TradeAction.QUANT
     if PARTIAL_TITLE_RE.search(title):
         return TradeAction.PARTIAL_CLOSE
     if CLOSE_TITLE_RE.search(title):
@@ -66,6 +69,14 @@ def parse_trade(title: str, url: str, body_text: str) -> TradeSignal:
     date_m = DATE_RE.search(body_text)
     if date_m:
         signal.published_date = date_m.group(1)
+
+    if action == TradeAction.QUANT:
+        level_m = QUANT_TITLE_RE.search(title)
+        if level_m:
+            level = level_m.group(1).upper()
+            signal.quant_level = level
+            signal.ticker = QUANT_LEVEL_INSTRUMENT[level]
+        return signal
 
     if action == TradeAction.INFO:
         return signal

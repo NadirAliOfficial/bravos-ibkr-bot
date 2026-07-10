@@ -9,7 +9,19 @@ class TradeAction(str, Enum):
     INCREASE = "INCREASE"
     PARTIAL_CLOSE = "PARTIAL_CLOSE"
     CLOSE = "CLOSE"
+    QUANT = "QUANT"
     INFO = "INFO"
+
+
+# Quant Portfolio trades a single instrument based on a regime signal —
+# Cash means fully out, Moderate holds QQQ unleveraged, Aggressive holds
+# TQQQ (3x leveraged) instead. Confirmed directly from Bravos's own support
+# replies on bravosresearch.com.
+QUANT_LEVEL_INSTRUMENT = {
+    "CASH": None,
+    "MODERATE": "QQQ",
+    "AGGRESSIVE": "TQQQ",
+}
 
 
 @dataclass
@@ -27,6 +39,7 @@ class TradeSignal:
     stop_loss: Optional[float] = None
     published_date: Optional[str] = None
     raw_text: str = ""
+    quant_level: Optional[str] = None  # "CASH" | "MODERATE" | "AGGRESSIVE"
     received_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 
     def to_dict(self) -> dict:
