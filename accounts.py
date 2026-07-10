@@ -46,7 +46,17 @@ def load_accounts(path: str = None) -> list[AccountConfig]:
     path = path or config.ACCOUNTS_CONFIG_PATH
     with open(path) as f:
         raw = json.load(f)
-    return [AccountConfig(**entry) for entry in raw]
+    accounts = [AccountConfig(**entry) for entry in raw]
+
+    # execution.py keys per-account results by account_id — a duplicate would
+    # silently overwrite an earlier account's outcome rather than erroring.
+    seen = set()
+    for a in accounts:
+        if a.account_id in seen:
+            raise ValueError(f"Duplicate account_id in accounts config: {a.account_id!r}")
+        seen.add(a.account_id)
+
+    return accounts
 
 
 def allocated_capital(account: AccountConfig, net_liquidation: float) -> float:

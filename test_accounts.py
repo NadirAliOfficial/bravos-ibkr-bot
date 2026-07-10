@@ -75,3 +75,19 @@ def test_load_accounts_from_file(tmp_path):
     assert len(accounts) == 1
     assert accounts[0].account_id == "U1"
     assert accounts[0].capital_value == 5000
+
+
+def test_load_accounts_rejects_duplicate_account_id(tmp_path):
+    entry = {
+        "account_id": "U1",
+        "label": "Test",
+        "gateway": "primary",
+        "capital_mode": "fixed",
+        "capital_value": 5000,
+        "tactical_split": 100,
+        "quant_split": 0,
+    }
+    path = tmp_path / "accounts.json"
+    path.write_text(json.dumps([entry, dict(entry, label="Duplicate")]))
+    with pytest.raises(ValueError):
+        load_accounts(str(path))
