@@ -1,5 +1,6 @@
 .venv/
 .env
+accounts.json
 __pycache__/
 *.pyc
 .browser_profile/

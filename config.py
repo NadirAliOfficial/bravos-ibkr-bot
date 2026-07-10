@@ -24,10 +24,6 @@ SIGNALS_DB_PATH = os.getenv("SIGNALS_DB_PATH", "signals.db")
 IBKR_HOST = os.getenv("IBKR_HOST", "127.0.0.1")
 IBKR_PORT = int(os.getenv("IBKR_PORT", "7497"))  # 7497 TWS paper, 7496 TWS live
 IBKR_CLIENT_ID = int(os.getenv("IBKR_CLIENT_ID", "17"))
-# The fill watcher holds its own persistent connection alongside the
-# short-lived one execution.py opens per order — each IBKR API client needs a
-# distinct clientId, or Gateway rejects the second connection.
-IBKR_WATCHER_CLIENT_ID = int(os.getenv("IBKR_WATCHER_CLIENT_ID", "18"))
 IBKR_ACCOUNT = os.getenv("IBKR_ACCOUNT", "")
 
 # --- Phase 3: multi-account, multi-login ---
@@ -48,6 +44,16 @@ IBKR_GATEWAYS = {
         "port": int(os.getenv("IBKR_WIFE_PORT", "4003")),
         "client_id": int(os.getenv("IBKR_WIFE_CLIENT_ID", "27")),
     },
+}
+
+# The fill watcher holds its own persistent connection per gateway, alongside
+# the short-lived ones execution.py opens per order — each IBKR API client on
+# the same Gateway needs a distinct clientId, or Gateway rejects the
+# connection. One fill_watcher.py process runs per gateway (see
+# `python fill_watcher.py <gateway-name>`).
+IBKR_WATCHER_CLIENT_IDS = {
+    "primary": int(os.getenv("IBKR_WATCHER_CLIENT_ID", "18")),
+    "wife": int(os.getenv("IBKR_WIFE_WATCHER_CLIENT_ID", "28")),
 }
 
 ACCOUNTS_CONFIG_PATH = os.getenv("ACCOUNTS_CONFIG_PATH", "accounts.json")

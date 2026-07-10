@@ -23,8 +23,13 @@ def _apply_common_fields(order, account: str):
 
 
 class IBKRClient:
-    def __init__(self):
+    def __init__(self, gateway: str = "primary"):
+        """`gateway` selects which running Gateway instance to connect to —
+        see config.IBKR_GATEWAYS. One IBKR login can hold several accounts
+        (Jon's own), but a family member's account needs its own login and
+        therefore its own Gateway process on a different port/clientId."""
         self.ib = IB()
+        self.gateway = config.IBKR_GATEWAYS[gateway]
 
     def connect(self):
         # ib_insync needs an asyncio event loop in the calling thread. When this
@@ -36,7 +41,9 @@ class IBKRClient:
         except RuntimeError:
             asyncio.set_event_loop(asyncio.new_event_loop())
 
-        self.ib.connect(config.IBKR_HOST, config.IBKR_PORT, clientId=config.IBKR_CLIENT_ID)
+        self.ib.connect(
+            self.gateway["host"], self.gateway["port"], clientId=self.gateway["client_id"]
+        )
         self.ib.reqMarketDataType(1)
 
     def disconnect(self):
@@ -61,6 +68,17 @@ class IBKRClient:
             if v.tag == "NetLiquidation" and v.currency == "USD":
                 return float(v.value)
         return 0.0
+
+    def current_price(self, ticker: str) -> float:
+        """Live last/close price for sizing the Quant Portfolio's QQQ/TQQQ
+        position — there's no signal price for these the way Tactical alerts
+        give one."""
+        contract = self._qualified_stock(ticker)
+        ticker_data = self.ib.reqMktData(contract, "", False, False)
+        self.ib.sleep(2)
+        price = ticker_data.last or ticker_data.close
+        self.ib.cancelMktData(contract)
+        return float(price) if price and price == price else 0.0  # NaN check
 
     def position_size(self, ticker: str, account: str = "") -> int:
         account = account or config.IBKR_ACCOUNT

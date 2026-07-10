@@ -21,6 +21,7 @@ ACTION_LABELS = {
     "INCREASE": "\U0001F7E2 INCREASE",
     "PARTIAL_CLOSE": "\U0001F7E1 PARTIAL CLOSE",
     "CLOSE": "\U0001F534 CLOSE",
+    "QUANT": "\U0001F535 QUANT SIGNAL",
 }
 
 STATUS_LABELS = {
@@ -47,6 +48,14 @@ def format_signal_message(signal: dict) -> str:
     action = signal["action"]
     ticker = escape(signal["ticker"] or "")
     title = escape(signal["title"] or "")
+
+    if action == "QUANT":
+        lines = [f"{ACTION_LABELS.get(action, action)}", f"<i>{title}</i>", ""]
+        level = signal["quant_level"] or "?"
+        instrument = signal["ticker"] or "cash (no position)"
+        lines += [f"<b>Signal:</b> {level}", f"<b>Target instrument:</b> {instrument}"]
+        return "\n".join(lines)
+
     lines = [f"{ACTION_LABELS.get(action, action)}  <b>{ticker}</b>", f"<i>{title}</i>", ""]
 
     if action == "OPEN":
@@ -66,6 +75,21 @@ def format_signal_message(signal: dict) -> str:
     elif action == "CLOSE":
         lines += [f"<b>Price:</b> ${signal['price']}"]
 
+    return "\n".join(lines)
+
+
+def format_account_results(account_results: dict) -> str:
+    """Per-account breakdown for the outcome message — one signal can now
+    touch several accounts at once, each independently sized."""
+    lines = ["<b>Results by account</b>", ""]
+    for account_id, result in account_results.items():
+        account_id = escape(str(account_id))
+        if result.get("status") == "executed":
+            order_ids = ", ".join(str(i) for i in result.get("order_ids", []))
+            lines.append(f"✅ <b>{account_id}</b> — orders {order_ids}")
+        else:
+            error = escape(str(result.get("error", "unknown error")))
+            lines.append(f"⚠️ <b>{account_id}</b> — {error}")
     return "\n".join(lines)
 
 
@@ -168,7 +192,7 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         try:
-            order_ids = await asyncio.to_thread(execute_signal_sync, signal)
+            account_results = await asyncio.to_thread(execute_signal_sync, signal)
         except ExecutionError as e:
             store.mark_failed(signal_id, str(e))
             await _sync_outcome(context, signal, f"<b>Status:</b> Failed\n<i>{escape(str(e))}</i>")
@@ -181,11 +205,8 @@ async def handle_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log.exception("Unexpected error executing signal %s", signal_id)
             return
 
-        store.mark_executed(signal_id, order_ids)
-        order_ids_str = ", ".join(str(i) for i in order_ids)
-        await _sync_outcome(
-            context, signal, f"<b>Status:</b> Executed\n<b>Order IDs:</b> {order_ids_str}"
-        )
+        store.mark_executed(signal_id, account_results)
+        await _sync_outcome(context, signal, format_account_results(account_results))
     finally:
         store.close()
 

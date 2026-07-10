@@ -1,6 +1,12 @@
 import json
 
-from telegram_bot import STATUS_LABELS, WELCOME_MESSAGE, approval_keyboard, format_signal_message
+from telegram_bot import (
+    STATUS_LABELS,
+    WELCOME_MESSAGE,
+    approval_keyboard,
+    format_account_results,
+    format_signal_message,
+)
 
 OPEN_SIGNAL = {
     "action": "OPEN",
@@ -67,6 +73,42 @@ def test_format_increase_shows_weight_transition():
 def test_format_close_shows_price():
     text = format_signal_message(CLOSE_SIGNAL)
     assert "$140.0" in text
+
+
+def test_format_quant_signal_shows_level_and_instrument():
+    signal = {
+        "action": "QUANT",
+        "title": "Model Signal (Aggressive)",
+        "quant_level": "AGGRESSIVE",
+        "ticker": "TQQQ",
+    }
+    text = format_signal_message(signal)
+    assert "AGGRESSIVE" in text
+    assert "TQQQ" in text
+
+
+def test_format_quant_signal_cash_shows_no_instrument():
+    signal = {
+        "action": "QUANT",
+        "title": "Model Signal (Cash)",
+        "quant_level": "CASH",
+        "ticker": None,
+    }
+    text = format_signal_message(signal)
+    assert "CASH" in text
+    assert "cash (no position)" in text
+
+
+def test_format_account_results_mixed_outcomes():
+    results = {
+        "U1234567": {"status": "executed", "order_ids": [10, 11, 12]},
+        "U2345678": {"status": "failed", "error": "No shares to sell"},
+    }
+    text = format_account_results(results)
+    assert "U1234567" in text
+    assert "10, 11, 12" in text
+    assert "U2345678" in text
+    assert "No shares to sell" in text
 
 
 def test_approval_keyboard_callback_data():

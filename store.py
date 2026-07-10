@@ -116,12 +116,16 @@ class SignalStore:
         return dict(zip(cols, row))
 
     def find_by_order_id(self, order_id: int) -> dict | None:
+        """ibkr_order_ids holds {account_id: {"status", "order_ids", ...}} —
+        scan every account's order list for this signal."""
         cur = self.conn.execute("SELECT * FROM signals WHERE ibkr_order_ids IS NOT NULL")
         cols = [c[0] for c in cur.description]
         for row in cur.fetchall():
             record = dict(zip(cols, row))
-            if order_id in json.loads(record["ibkr_order_ids"] or "[]"):
-                return record
+            account_results = json.loads(record["ibkr_order_ids"] or "{}")
+            for result in account_results.values():
+                if order_id in result.get("order_ids", []):
+                    return record
         return None
 
     def mark_sent(self, signal_id: int, chat_message_pairs: list[tuple[str, int]]):
@@ -138,12 +142,17 @@ class SignalStore:
         )
         self.conn.commit()
 
-    def mark_executed(self, signal_id: int, ibkr_order_ids: list[int]):
+    def mark_executed(self, signal_id: int, account_results: dict):
+        """account_results: {account_id: {"status": "executed"|"failed",
+        "order_ids": [...], "error": "..."}}. Overall status is 'executed' if
+        at least one account succeeded, 'failed' only if every account did."""
+        any_success = any(r.get("status") == "executed" for r in account_results.values())
+        status = "executed" if any_success else "failed"
         self.conn.execute(
             """UPDATE signals
-               SET status = 'executed', decided_at = datetime('now'), ibkr_order_ids = ?
+               SET status = ?, decided_at = datetime('now'), ibkr_order_ids = ?
                WHERE id = ?""",
-            (json.dumps(ibkr_order_ids), signal_id),
+            (status, json.dumps(account_results), signal_id),
         )
         self.conn.commit()
 

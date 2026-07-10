@@ -31,6 +31,8 @@ def run_once(watcher: EmailWatcher, fetcher: ArticleFetcher, store: SignalStore)
 
         if signal.action.value == "INFO":
             log.info("  -> informational update, skipped")
+        elif signal.action.value == "QUANT":
+            log.info("  -> QUANT signal=%s instrument=%s", signal.quant_level, signal.ticker)
         else:
             log.info(
                 "  -> %s %s price=%s weight=%s/%s tp=%s sl=%s",
