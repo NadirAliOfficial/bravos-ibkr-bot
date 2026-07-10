@@ -40,6 +40,8 @@ _MIGRATION_COLUMNS = [
     # JSON list of [chat_id, message_id] pairs — one signal can be sent to
     # several Telegram recipients at once (see config.TELEGRAM_CHAT_IDS).
     ("telegram_messages", "TEXT"),
+    # "CASH" | "MODERATE" | "AGGRESSIVE" — only set for QUANT signals.
+    ("quant_level", "TEXT"),
 ]
 
 
@@ -68,8 +70,9 @@ class SignalStore:
             """
             INSERT OR IGNORE INTO signals
                 (action, ticker, company, title, url, price, weight_from, weight_to,
-                 weight, take_profits, stop_loss, published_date, raw_text, received_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 weight, take_profits, stop_loss, published_date, raw_text, received_at,
+                 quant_level)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 signal.action.value,
@@ -86,6 +89,7 @@ class SignalStore:
                 signal.published_date,
                 signal.raw_text,
                 signal.received_at,
+                signal.quant_level,
             ),
         )
         self.conn.commit()
