@@ -15,7 +15,11 @@ PRICE_AT_RE = re.compile(r"\bat\s*\$([\d,]+\.?\d*)")
 ENTRY_LINE_RE = re.compile(r"Entry:\s*\$([\d,]+\.?\d*)", re.I)
 TP_LINE_RE = re.compile(r"Take Profit \(TP\):\s*(.+)", re.I)
 SL_LINE_RE = re.compile(r"Suggested Stop Loss \(SL\):\s*\$([\d,]+\.?\d*)", re.I)
-WEIGHT_ALLOC_RE = re.compile(r"weight allocation of\s*(\d+(?:\.\d+)?)", re.I)
+# Bravos phrases this two ways: a structured footer line ("Weight Allocation:
+# 5") and an inline mention in the lead paragraph ("with a weight of 5" / "a
+# weight allocation of 5") — "allocation" is optional in the inline form.
+WEIGHT_ALLOC_LINE_RE = re.compile(r"Weight Allocation:\s*(\d+(?:\.\d+)?)", re.I)
+WEIGHT_ALLOC_INLINE_RE = re.compile(r"weight (?:allocation )?of\s*(\d+(?:\.\d+)?)", re.I)
 WEIGHT_FROM_TO_RE = re.compile(
     r"weight of\s*(\d+(?:\.\d+)?)\s*to(?:\s*a weight of)?\s*(\d+(?:\.\d+)?)", re.I
 )
@@ -86,7 +90,7 @@ def parse_trade(title: str, url: str, body_text: str) -> TradeSignal:
         signal.price = _to_float(price_m.group(1))
 
     if action == TradeAction.OPEN:
-        wm = WEIGHT_ALLOC_RE.search(body_text)
+        wm = WEIGHT_ALLOC_LINE_RE.search(body_text) or WEIGHT_ALLOC_INLINE_RE.search(body_text)
         if wm:
             signal.weight = _to_float(wm.group(1))
 

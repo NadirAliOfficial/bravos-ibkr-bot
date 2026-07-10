@@ -43,6 +43,24 @@ Take Profit (TP): $21.5, $22.5, and $25
 Suggested Stop Loss (SL): $16.75
 """
 
+NVDA_BODY = """
+07/10/2026
+Save Post
+We are initiating a position in NVIDIA (NVDA) at $209.50 with a weight of 5, a stop at $190, and price targets of $250, $275, and $300.
+
+We recently exited our previous position in NVIDIA after the stock broke below our shorter-term support level and violated the risk management parameters established when the trade was initiated. Since then, however, the stock
+
+Entry: $209.50
+
+Take Profit (TP): $250, $275, and $300
+
+Suggested Stop Loss (SL): $190
+
+Weight Allocation: 5
+
+Traders can get exposure to $NVDA through Interactive Brokers
+"""
+
 ASML_BODY = """
 07/02/2026
 Save post
@@ -136,6 +154,23 @@ def test_open_sofi():
     assert s.weight == 5
     assert s.take_profits == [21.5, 22.5, 25]
     assert s.stop_loss == 16.75
+
+
+def test_open_nvda_weight_allocation_colon_format():
+    """Regression test: this real alert uses 'Weight Allocation: 5' (colon
+    footer format) instead of 'weight allocation of 5' — the original regex
+    only matched the latter and silently returned weight=None."""
+    s = parse_trade(
+        "Initiating Long on Nvidia ($NVDA) | Breakout",
+        "https://bravosresearch.com/news-feed/initiating-long-on-nvidia-nvda-breakout-2/",
+        NVDA_BODY,
+    )
+    assert s.action == TradeAction.OPEN
+    assert s.ticker == "NVDA"
+    assert s.price == 209.50
+    assert s.weight == 5
+    assert s.take_profits == [250.0, 275.0, 300.0]
+    assert s.stop_loss == 190.0
 
 
 def test_close_asml():
